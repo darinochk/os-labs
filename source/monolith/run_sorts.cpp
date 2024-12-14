@@ -1,11 +1,11 @@
 #include <iostream>
 #include <thread>
 #include <vector>
-#include <cstdlib> // Для функции system
+#include <cstdlib>
 #include <string>
-#include <sstream> // Для обработки аргументов командной строки
+#include <sstream>
 
-// Функция для запуска программы "sort" с заданными параметрами
+
 void runSort(int arg1, int arg2) {
     std::string command = "./sort " + std::to_string(arg1) + " " + std::to_string(arg2);
     int result = system(command.c_str());
@@ -15,7 +15,6 @@ void runSort(int arg1, int arg2) {
     }
 }
 
-// Функция для запуска программы "ema-sort-int" с заданными параметрами
 void runEmaSortInt(int arg1, int arg2) {
     std::string command = "./ema-sort-int " + std::to_string(arg1) + " " + std::to_string(arg2);
     int result = system(command.c_str());
@@ -38,23 +37,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    const int arg1 = 10; // Первый аргумент для программ
-    const int arg2 = 1;  // Второй аргумент для программ
+    const int arg1 = 10;
+    const int arg2 = 1;
 
-    // Вектор для хранения потоков
     std::vector<std::thread> threads;
 
-    // Запуск программы "sort" в нескольких потоках
     for (int i = 0; i < threadCount; ++i) {
         threads.emplace_back(runSort, arg1, arg2);
     }
 
-    // Запуск программы "ema-sort-int" в нескольких потоках
     for (int i = 0; i < threadCount; ++i) {
         threads.emplace_back(runEmaSortInt, arg1, arg2);
     }
 
-    // Ожидание завершения всех потоков
     for (auto& thread : threads) {
         if (thread.joinable()) {
             thread.join();
