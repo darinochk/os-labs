@@ -1,59 +1,104 @@
-#include <algorithm>
+#include <iostream>
+#include <fstream>
+#include <vector>
 #include <cstdlib>
 #include <ctime>
-#include <iostream>
-#include <vector>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <algorithm>
+#include <chrono>
 
+void generateData(const std::string& filename, int size) {
+    std::ofstream outFile(filename);
+    if (!outFile) {
+        std::cerr << "Error opening file for writing!" << std::endl;
+        exit(1);
+    }
 
-std::vector<int> GenerateRandomArray(int size) {
-  std::vector<int> array(size);
-  for (int& num : array) {
-    num = rand() % 100;
-  }
-  return array;
+    for (int i = 0; i < size; ++i) {
+        outFile << rand() % 1000000 << std::endl; 
+    }
+
+    outFile.close();
 }
 
-void PrintArray(const std::vector<int>& array, const std::string& label) {
-  std::cout << label << ": ";
-  for (int num : array) {
-    std::cout << num << " ";
-  }
-  std::cout << std::endl;
+void sortData(const std::string& filename) {
+    std::ifstream inFile(filename);
+    std::vector<int> data;
+    int number;
+
+    while (inFile >> number) {
+        data.push_back(number);
+    }
+
+    inFile.close();
+
+    std::sort(data.begin(), data.end());
+
+    // тут отсортированные данные обратно в файл
+    std::ofstream outFile(filename);
+    for (int num : data) {
+        outFile << num << std::endl;
+    }
+    outFile.close();
+}
+
+void printArray(const std::string& filename) {
+    std::ifstream inFile(filename);
+    int number;
+
+    while (inFile >> number) {
+        std::cout << number << " ";
+    }
+
+    std::cout << std::endl;
 }
 
 int main(int argc, char* argv[]) {
-  if (argc != 3) {
-    std::cerr << "Usage: " << argv[0] << " <array_size> <repetitions>" << std::endl;
-    return 1;
-  }
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <number of elements> <number of repetitions>" << std::endl;
+        return 1;
+    }
 
-  int array_size = std::stoi(argv[1]);
-  int repetitions = std::stoi(argv[2]);
+    int n = std::stoi(argv[1]);  
+    int repetitions = std::stoi(argv[2]);  
 
-  if (array_size <= 0 || repetitions <= 0) {
-    std::cerr << "Both parameters must be positive integers." << std::endl;
-    return 1;
-  }
+    std::string filename = "input.txt";
 
-  srand(static_cast<unsigned>(time(nullptr)));
+    generateData(filename, n);
 
-  for (int i = 0; i < repetitions; ++i) {
-    std::vector<int> numbers = GenerateRandomArray(array_size);
+    std::cout << "Initial array: ";
+    printArray(filename);
 
-    PrintArray(numbers, "Original array");
+    auto start = std::chrono::high_resolution_clock::now();
 
-    clock_t start_time = clock();
-    std::sort(numbers.begin(), numbers.end());
-    clock_t end_time = clock();
+    for (int i = 0; i < repetitions; ++i) {
+        pid_t pid = fork();  // ВОТ ТУТ дочерний процесс начинается 
 
-    PrintArray(numbers, "Sorted array");
+        if (pid == -1) { 
+            std::cerr << "Fork failed!" << std::endl;
+            return 1;
+        }
 
-    double elapsed_time = double(end_time - start_time) / CLOCKS_PER_SEC;
-    std::cout << "Iteration " << (i + 1) << ": Sorting completed in " << elapsed_time << " seconds."
-              << std::endl;
+        if (pid == 0) {  // Дочерний 
+            std::cout << "Initial array (iteration " << i + 1 << "): ";
+            printArray(filename);
 
-    std::cout << "---------------------------------" << std::endl;
-  }
+            sortData(filename);  
 
-  return 0;
+            std::cout << "Sorted array (iteration " << i + 1 << "): ";
+            printArray(filename);
+
+            exit(0);  // завершается
+        } else {  // А ТУТ родительский
+            wait(NULL);  // чето ждем
+        }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+
+    std::cout << "Execution time: " << duration.count() << " seconds." << std::endl;
+
+    return 0;
 }
